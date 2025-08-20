@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="images/favi.png" rel="icon" />
+<title>S.M Invoice</title>
+
+<!-- Fonts & Styles -->
+<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700' type='text/css'>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+<style>
+  body { font-family: 'Poppins', sans-serif; }
+  .invoice-container { background: #fff; padding: 20px; margin-top: 20px; border: 1px solid #ddd; }
+</style>
+</head>
+<body class="container">
+
+<h3 class="mt-3">Invoice Form</h3>
+<form id="invoiceForm" class="row g-3">
+  <div class="col-md-4">
+    <label class="form-label">Invoice No</label>
+    <input type="text" class="form-control" id="invoiceNo" placeholder="00001">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Date</label>
+    <input type="date" class="form-control" id="invoiceDate" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Logo</label>
+    <select class="form-control" name="logo" id="logoSelect" onchange="changeLogo()" required>
+        <option value="images/logosm.png">Interiors</option>
+        <option value="images/builders.png">Builders</option>
+    </select>
+  </div>
+  
+  <div class="col-md-6">
+    <label class="form-label">Invoiced To</label>
+    <textarea class="form-control" id="invoicedTo" placeholder="name"></textarea>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Pay To</label>
+    <textarea class="form-control" id="payTo" placeholder="address">
+    S.M Interiors & Decors
+    Coimbatore
+    smdevelopers1996@gmail.com
+    </textarea>
+  </div>
+
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+      <h5 class="mb-0">Items</h5>
+      <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">+ Add Item</button>
+    </div>
+    <!-- <h5>Items</h5>
+    <button type="button" class="btn btn-sm btn-primary" onclick="addItem()">+ Add Item</button> -->
+    <table class="table table-bordered" id="itemsTable">
+      <thead class="table-light">
+        <tr>
+          <th>Service</th>
+          <th>Description</th>
+          <th>Rate</th>
+          <th>Qty</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+  </div>
+
+  <div class="col-12 text-center">
+    <button type="submit" class="btn btn-success">Generate Invoice</button>
+  </div>
+</form>
+
+<!-- Invoice -->
+<div id="invoice" class="invoice-container d-none"></div>
+
+<script>
+function addItem(service="", desc="", rate="", qty="") {
+  const row = `<tr>
+    <td><input type="text" class="form-control service" placeholder="service" value="${service}" required></td>
+    <td><input type="text" class="form-control desc" placeholder="note" value="${desc}" required></td>
+    <td><input type="number" class="form-control rate" placeholder="price" value="${rate}" required></td>
+    <td><input type="number" class="form-control qty" placeholder="qty" value="${qty}" required></td>
+    <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button></td>
+  </tr>`;
+  document.querySelector("#itemsTable tbody").insertAdjacentHTML("beforeend", row);
+}
+
+// Handle form submit
+document.getElementById("invoiceForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  // Collect form data
+  const invoiceNo = document.getElementById("invoiceNo").value;
+  const invoiceDate = document.getElementById("invoiceDate").value;
+  const invoicedTo = document.getElementById("invoicedTo").value.replace(/\n/g,"<br>");
+  const payTo = document.getElementById("payTo").value.replace(/\n/g,"<br>");
+  const logo = document.getElementById("logoSelect").value.replace(/\n/g,"<br>");
+
+  let items = [];
+  let subTotal = 0;
+  document.querySelectorAll("#itemsTable tbody tr").forEach(tr => {
+    const service = tr.querySelector(".service").value;
+    const desc = tr.querySelector(".desc").value;
+    const rate = parseFloat(tr.querySelector(".rate").value);
+    const qty = parseInt(tr.querySelector(".qty").value);
+    const amount = rate * qty;
+    subTotal += amount;
+    items.push({service, desc, rate, qty, amount});
+  });
+
+  let tax = 0; // you can calculate tax if needed
+  let total = subTotal + tax;
+
+  // Save in localStorage
+  const invoiceData = { logo,invoiceNo, invoiceDate, invoicedTo, payTo, items, subTotal, tax, total };
+  localStorage.setItem("invoiceData", JSON.stringify(invoiceData));
+
+  // Render invoice
+  renderInvoice(invoiceData);
+});
+
+function changeLogo() {
+  const select = document.getElementById("logoSelect");
+  const image = document.getElementById("logoImage");
+  image.src =  select.value; // change logo dynamically
+}
+
+function renderInvoice(data) {
+  let rows = data.items.map(i => `
+    <tr>
+      <td>${i.service}</td>
+      <td>${i.desc}</td>
+      <td class="text-center">Rs:${i.rate.toFixed(2)}</td>
+      <td class="text-center">${i.qty}</td>
+      <td class="text-end">Rs:${i.amount.toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("invoice").innerHTML = `
+    <header>
+      <div class="row align-items-center">
+        <div class="col-sm-7"><img id="logoImage" src=${data.logo} width="160"/></div>
+        <div class="col-sm-5 text-sm-end"><h4 class="text-7 mb-0">Invoice</h4></div>
+      </div><hr>
+    </header>
+    <main>
+      <div class="row">
+        <div class="col-sm-6"><strong>Date:</strong> ${data.invoiceDate}</div>
+        <div class="col-sm-6 text-sm-end"><strong>Invoice No:</strong> ${data.invoiceNo}</div>
+      </div><hr>
+      <div class="row">
+        <div class="col-sm-6"><strong>Invoiced To:</strong><br><address>${data.invoicedTo}</address></div>
+        <div class="col-sm-6 text-sm-end"><strong>Pay To:</strong><br><address>${data.payTo}</address></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table border mb-0">
+          <thead class="bg-light">
+            <tr>
+              <th>Service</th><th>Description</th><th class="text-center">Rate</th><th class="text-center">QTY</th><th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="table-responsive">
+        <table class="table border border-top-0 mb-0">
+          <tr class="bg-light"><td class="text-end"><strong>Sub Total:</strong></td><td class="text-end">Rs:${data.subTotal.toFixed(2)}</td></tr>
+          <tr class="bg-light"><td class="text-end"><strong>Tax:</strong></td><td class="text-end">Rs:${data.tax.toFixed(2)}</td></tr>
+          <tr class="bg-light"><td class="text-end"><strong>Total:</strong></td><td class="text-end">Rs:${data.total.toFixed(2)}</td></tr>
+        </table>
+      </div>
+    </main>
+    <footer class="text-center mt-4">
+      <p><strong>NOTE:</strong> This is computer generated receipt and does not require physical signature.</p>
+      <button onclick="printInvoice()" class="btn btn-light border d-print-none"><i class="fa fa-print"></i> Print & Download</button>
+    </footer>
+  `;
+  document.getElementById("invoice").classList.remove("d-none");
+}
+
+function printInvoice() {
+  let printContent = document.getElementById("invoice").innerHTML;
+  let win = window.open('', '', 'width=900,height=650');
+  win.document.write('<html><head><title>Print Invoice</title>');
+  win.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">');
+  win.document.write('</head><body>');
+  win.document.write(printContent);
+  win.document.write('</body></html>');
+  win.document.close();
+  win.print();
+}
+
+// Load existing invoice from localStorage
+window.onload = () => {
+  const saved = localStorage.getItem("invoiceData");
+  if (saved) renderInvoice(JSON.parse(saved));
+};
+</script>
+
+</body>
+</html>
